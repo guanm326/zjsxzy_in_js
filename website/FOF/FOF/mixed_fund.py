@@ -20,7 +20,7 @@ def filter_mixed(df):
     # 剔除非A类份额(包含A或者不包含任何字母)
     df = df[(df['sec_name'].str.contains('A')) | (~df['sec_name'].str.contains(r'[A-Z]'))]
     # 基金状态为开放申购|开放赎回
-    df = df[df['fund_status'] == u'开放申购|开放赎回']
+    # df = df[df['fund_status'] == u'开放申购|开放赎回']
     return df
 
 def save_mixed_fund_panel():
@@ -32,7 +32,9 @@ def save_mixed_fund_panel():
     for ticker in df['wind_code']:
         fname = '%s/history/%s.xlsx'%(const.DATA_DIR, ticker)
         df = pd.read_excel(fname, index_col=0)
-        df = df[df.index >= '2014-01-01']
+        df = df.loc[~df.index.duplicated(keep='first')]
+        df = utils.get_historical_return(df)
+        df = df[df.index >= '2000-01-01']
         if df.ix[-1, 'nav_adj'] <= 0:
             df = df.drop(df.index[-1])
             df.to_excel(fname)
@@ -51,9 +53,3 @@ def save_mixed_fund_panel():
             utils.calculate_empyrical('mixed')
 
     # pnl.to_pickle('%s/mixed.pkl'%(const.FOF_DIR))
-
-def main():
-    save_mixed_fund_panel()
-
-if __name__ == '__main__':
-    main()

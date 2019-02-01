@@ -10,33 +10,34 @@ import requests
 import sys
 import time as T
 
+import const
 import crawl_gov
 
-DATA_DIR = "C:/Users/jgtzsx01/Documents/workspace/data"
-WALLSTCN_DIR = "%s/wallstreetcn"%(DATA_DIR)
-CSRC_DIR = "%s/CSRC"%(DATA_DIR)
-CBRC_DIR = "%s/CBRC"%(DATA_DIR)
-CIRC_DIR = "%s/CIRC"%(DATA_DIR)
+# DATA_DIR = "C:/Users/jgtzsx01/Documents/workspace/data"
+# WALLSTCN_DIR = "%s/wallstreetcn"%(DATA_DIR)
+# CSRC_DIR = "%s/CSRC"%(DATA_DIR)
+# CBRC_DIR = "%s/CBRC"%(DATA_DIR)
+# CIRC_DIR = "%s/CIRC"%(DATA_DIR)
 
 def get_latest_node():
     url = 'http://wallstreetcn.com'
     response = requests.get(url)
     text = response.text.encode('utf-8')
     soup = BeautifulSoup(text, "html.parser")
-    news = soup.find_all(class_='home-news-item__main')
+    news = soup.find_all(class_='home-article-item')
     for ele in news:
         href = ele.find('a').get('href')
         if href.startswith('/articles/'):
             return int(href.split('/')[-1])
 
 def crawl_wallst(start_node=3010475):
-    PAGE_NOT_FOUND_FILE = "%s/page_not_found.txt"%(DATA_DIR)
+    PAGE_NOT_FOUND_FILE = "%s/page_not_found.txt"%(const.WORK_DIR)
     with open(PAGE_NOT_FOUND_FILE, 'r') as fp:
         page_not_found_list = [int(line.strip()) for line in fp.readlines()]
-    years = [y for y in os.listdir(WALLSTCN_DIR)]
+    years = [y for y in os.listdir(const.WALLSTCN_DIR)]
     downloaded = []
     for y in years:
-        files = [int(f[:-4]) for f in os.listdir("%s/%s/"%(WALLSTCN_DIR, y))]
+        files = [int(f[:-4]) for f in os.listdir("%s/%s/"%(const.WALLSTCN_DIR, y))]
         downloaded += files
     print downloaded[-10:]
     print page_not_found_list[-10:]
@@ -72,6 +73,7 @@ def crawl_wallst(start_node=3010475):
                 with open(PAGE_NOT_FOUND_FILE, 'a') as f:
                     f.write(str(node_id) + '\n')
                 continue
+            title = title.replace(u'\ufa45', '').replace(u'\u22ef', '').replace(u'\ufeff', '').replace(u'\u2022', '').replace(u'\u200b', '').replace(u'\xa0', '').replace(u'\xae', '')
             print title
             content = soup.find(class_="page-article-content")
             if content == None:
@@ -79,19 +81,22 @@ def crawl_wallst(start_node=3010475):
             content = content.get_text()
             # time = soup.find(class_="title-meta-time").contents[-1]
             # if time == None:
-            time = soup.find(class_='meta-item__text').get_text()
+            time = soup.find(class_='time')
+            time = time.get_text().lstrip().rstrip()
             year = time[:4]
-            author = soup.find(class_="author-meta-name")
-            if author == None:
-                author = soup.find(class_="title-meta-source")
-            if author == None:
-                author = soup.find(class_="article__author__meta__item__name")
-            if author == None:
-                author = "no author"
-            else:
-                author = author.get_text().lstrip().rstrip()
+            author = soup.find(class_="auth")
+            author = author.get_text().lstrip().rstrip()
+            # print author, time, year
+            # if author == None:
+                # author = soup.find(class_="title-meta-source")
+            # if author == None:
+                # author = soup.find(class_="article__author__meta__item__name")
+            # if author == None:
+                # author = "no author"
+            # else:
+                # author = author.get_text().lstrip().rstrip()
 
-            filename = "%s/%s/%d.txt"%(WALLSTCN_DIR, str(year), node_id)
+            filename = "%s/%s/%d.txt"%(const.WALLSTCN_DIR, str(year), node_id)
             if os.path.exists(filename):
                 continue
             print "saving to file: ", filename
@@ -241,6 +246,7 @@ def crawl_circ(page_id=47):
 
 def main():
     node = get_latest_node()
+    print node
     crawl_wallst(node)
     crawl_gov.update()
 
